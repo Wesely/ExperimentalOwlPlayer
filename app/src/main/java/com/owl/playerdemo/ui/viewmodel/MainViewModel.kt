@@ -2,8 +2,10 @@ package com.owl.playerdemo.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.owl.playerdemo.data.repository.VideoDownloadRepository
 import com.owl.playerdemo.data.service.PexelsService
 import com.owl.playerdemo.data.util.NetworkConnectivityManager
+import com.owl.playerdemo.model.DownloadedVideo
 import com.owl.playerdemo.model.User
 import com.owl.playerdemo.model.VideoFile
 import com.owl.playerdemo.model.VideoItem
@@ -17,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val pexelsService: PexelsService,
-    private val networkConnectivityManager: NetworkConnectivityManager
+    private val networkConnectivityManager: NetworkConnectivityManager,
+    private val downloadRepository: VideoDownloadRepository
 ) : ViewModel() {
 
     private val _videos = MutableStateFlow<List<VideoItem>>(emptyList())
@@ -31,6 +34,9 @@ class MainViewModel @Inject constructor(
     
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
+    
+    // Expose downloaded videos from repository
+    val downloadedVideos: StateFlow<Map<Int, DownloadedVideo>> = downloadRepository.downloadedVideos
 
     init {
         observeNetworkConnectivity()
@@ -46,6 +52,41 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+    }
+    
+    /**
+     * Check if a video is downloaded
+     */
+    fun isVideoDownloaded(videoId: Int): Boolean {
+        return downloadRepository.isVideoDownloaded(videoId)
+    }
+    
+    /**
+     * Get the local path for a downloaded video
+     */
+    fun getLocalVideoPath(videoId: Int): String? {
+        return downloadRepository.getLocalVideoPath(videoId)
+    }
+    
+    /**
+     * Save downloaded video information
+     */
+    fun saveDownloadedVideo(videoId: Int, localFilePath: String, fileName: String) {
+        downloadRepository.saveDownloadedVideo(videoId, localFilePath, fileName)
+    }
+    
+    /**
+     * Remove a downloaded video
+     */
+    fun removeDownloadedVideo(videoId: Int) {
+        downloadRepository.removeDownloadedVideo(videoId)
+    }
+    
+    /**
+     * Get a list of all downloaded videos
+     */
+    fun getAllDownloadedVideos(): List<DownloadedVideo> {
+        return downloadRepository.getAllDownloadedVideos()
     }
 
     fun fetchVideos() {

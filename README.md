@@ -11,6 +11,13 @@ https://www.pexels.com/api/documentation/
 - Video quality options (HD, Full HD, 4K)
 - Includes video metadata (duration, dimensions, fps)
 
+### Video Download & Offline Playback
+- Download videos for offline viewing
+- Persistent storage of download information between app sessions
+- Track downloaded status of videos
+- Play local videos without internet connection
+- View all downloaded videos as a separate collection
+
 ### Technical Implementation
 - MVVM architecture with Clean Architecture principles
 - Repository pattern for data operations
