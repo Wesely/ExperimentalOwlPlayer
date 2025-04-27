@@ -54,6 +54,13 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     
+    // Material3
+    implementation("androidx.compose.material3:material3:1.2.1")
+    implementation("androidx.compose.material3:material3-window-size-class:1.2.1")
+    
+    // Coil for image loading
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    
     // Hilt dependencies
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
