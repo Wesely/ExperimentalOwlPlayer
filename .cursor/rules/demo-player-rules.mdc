@@ -1,0 +1,60 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# OwlPlayer Project Rules
+
+## Documentation
+
+### Features
+- After finished a feature, also update important key infos to README.md 
+- Keep README.md simple, with readable length.
+- When README.md is long enough. Remove less important lines. 
+
+## Code Style
+
+### Kotlin
+tions as specified in [Kotlin Coding Conventions](mdc:https:/kotlinlang.org/docs/coding-conventions.html)
+- Maximum line length: 100 characters
+- Use 4 spaces for indentation
+- End files with a newline
+- Follow MAD (Modern Android Design) guidelines.
+
+### XML
+- Use 4 spaces for indentation
+- IDs should follow the pattern: `<element_type>_<screen/component>_<description>`
+  - Example: `btn_main_play`, `tv_player_title`
+- Resource naming:
+  - Layouts: `activity_*.xml`, `fragment_*.xml`, `item_*.xml`
+  - Drawables: `ic_*.xml` for icons, `bg_*.xml` for backgrounds
+  - Colors: Use descriptive names like `colorPrimary`, `colorTextDefault`
+
+## Project Structure
+- Package by feature, not by type
+- Keep activities and fragments slim, move business logic to view models
+- Use the MVVM architecture pattern with Clean Architecture principles
+- Utilize the Repository pattern for data operations
+
+
+## Documentation
+- Public methods and classes should have documentation comments
+- Code explanations should be clear and concise
+
+## Git Workflow
+- Commit messages must be in English
+- Follow the conventional commits format: `<type>: <description>`
+- Types include: feat, fix, refactor, docs, style, test, chore
+- Create feature branches from develop branch
+- Use pull requests for code reviews before merging
+- Maintain a clean commit history with atomic commits
+
+## Dependencies
+- Add new dependencies only when necessary
+- Document the purpose of each dependency in the build.gradle file
+- Keep dependencies updated regularly
