@@ -16,3 +16,6 @@ https://www.pexels.com/api/documentation/
 - Repository pattern for data operations
 - Retrofit + OkHttp for network calls
 - Dependency injection with Hilt
+
+# Connectivity 
+![image](https://github.com/user-attachments/assets/336a58b7-46c2-41cf-a777-1fd70130573e)

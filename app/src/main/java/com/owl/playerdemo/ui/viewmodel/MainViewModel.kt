@@ -3,25 +3,63 @@ package com.owl.playerdemo.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.owl.playerdemo.data.service.PexelsService
+import com.owl.playerdemo.data.util.NetworkConnectivityManager
 import com.owl.playerdemo.model.User
 import com.owl.playerdemo.model.VideoFile
 import com.owl.playerdemo.model.VideoItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val pexelsService: PexelsService
+    private val pexelsService: PexelsService,
+    private val networkConnectivityManager: NetworkConnectivityManager
 ) : ViewModel() {
 
     private val _videos = MutableStateFlow<List<VideoItem>>(getSampleVideos())
     val videos: StateFlow<List<VideoItem>> = _videos
+    
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+    
+    private val _isNetworkAvailable = MutableStateFlow(false)
+    val isNetworkAvailable: StateFlow<Boolean> = _isNetworkAvailable
+    
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage: StateFlow<String?> = _errorMessage
+
+    init {
+        observeNetworkConnectivity()
+    }
+    
+    private fun observeNetworkConnectivity() {
+        viewModelScope.launch {
+            networkConnectivityManager.isNetworkAvailable.collectLatest { isAvailable ->
+                _isNetworkAvailable.value = isAvailable
+                if (isAvailable && _videos.value == getSampleVideos()) {
+                    // If network becomes available and we're showing sample data, fetch real data
+                    fetchVideos()
+                }
+            }
+        }
+    }
 
     fun fetchVideos() {
         viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            
+            if (!_isNetworkAvailable.value) {
+                _errorMessage.value = "No internet connection available"
+                _videos.value = getSampleVideos()
+                _isLoading.value = false
+                return@launch
+            }
+            
             try {
                 val response = pexelsService.searchVideos(
                     query = "nature",
@@ -54,13 +92,18 @@ class MainViewModel @Inject constructor(
                 
                 _videos.value = videoList
             } catch (e: Exception) {
-                println("Error fetching videos: ${e.message}")
-                e.printStackTrace()
+                _errorMessage.value = "Failed to load videos: ${e.message}"
                 if (_videos.value.isEmpty()) {
                     _videos.value = getSampleVideos()
                 }
+            } finally {
+                _isLoading.value = false
             }
         }
+    }
+    
+    fun retryFetchVideos() {
+        fetchVideos()
     }
     
     private fun getSampleVideos(): List<VideoItem> {

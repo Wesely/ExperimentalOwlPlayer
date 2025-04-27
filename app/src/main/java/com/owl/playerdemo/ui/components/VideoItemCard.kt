@@ -68,7 +68,7 @@ fun VideoItemCard(
             IconButton(
                 onClick = { /* TODO: Implement download logic */ },
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
+                    .align(Alignment.BottomEnd)
                     .padding(8.dp)
                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                     .size(36.dp)
@@ -77,7 +77,7 @@ fun VideoItemCard(
                     painter = painterResource(id = R.drawable.ic_download),
                     contentDescription = "Download",
                     tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(32.dp)
                 )
             }
         }
