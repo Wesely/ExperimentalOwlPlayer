@@ -1,12 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: true
----
----
-description: 
-globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 # OwlPlayer Project Rules
 
@@ -20,7 +15,7 @@ alwaysApply: true
 ## Code Style
 
 ### Kotlin
-tions as specified in [Kotlin Coding Conventions](mdc:https:/kotlinlang.org/docs/coding-conventions.html)
+tions as specified in @Kotlin Coding Conventions
 - Maximum line length: 100 characters
 - Use 4 spaces for indentation
 - End files with a newline
@@ -41,6 +36,13 @@ tions as specified in [Kotlin Coding Conventions](mdc:https:/kotlinlang.org/docs
 - Use the MVVM architecture pattern with Clean Architecture principles
 - Utilize the Repository pattern for data operations
 
+## Dependency Injection (Hilt)
+- Organize Hilt modules by feature or responsibility
+- Avoid duplicate bindings by ensuring each dependency is provided in only one module
+- Use clear module names that reflect their purpose (e.g., NetworkModule, DatabaseModule)
+- Keep network-related dependencies in NetworkModule
+- Keep application-wide dependencies in AppModule
+- Document the purpose of each module with clear comments
 
 ## Documentation
 - Public methods and classes should have documentation comments
@@ -58,3 +60,4 @@ tions as specified in [Kotlin Coding Conventions](mdc:https:/kotlinlang.org/docs
 - Add new dependencies only when necessary
 - Document the purpose of each dependency in the build.gradle file
 - Keep dependencies updated regularly
+
