@@ -83,7 +83,7 @@ fun VideoScreen() {
         // Network Status Indicator
         if (!isNetworkAvailable) {
             Text(
-                text = "⚠️ No Internet Connection - Showing Offline Content",
+                text = "⚠️ No Internet Connection - Cannot Load Videos",
                 color = Color.Red,
                 fontSize = 16.sp,
                 modifier = Modifier.padding(8.dp)

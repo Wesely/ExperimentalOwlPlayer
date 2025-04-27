@@ -20,7 +20,7 @@ class MainViewModel @Inject constructor(
     private val networkConnectivityManager: NetworkConnectivityManager
 ) : ViewModel() {
 
-    private val _videos = MutableStateFlow<List<VideoItem>>(getSampleVideos())
+    private val _videos = MutableStateFlow<List<VideoItem>>(emptyList())
     val videos: StateFlow<List<VideoItem>> = _videos
     
     private val _isLoading = MutableStateFlow(false)
@@ -40,8 +40,8 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             networkConnectivityManager.isNetworkAvailable.collectLatest { isAvailable ->
                 _isNetworkAvailable.value = isAvailable
-                if (isAvailable && _videos.value == getSampleVideos()) {
-                    // If network becomes available and we're showing sample data, fetch real data
+                if (isAvailable && _videos.value.isEmpty()) {
+                    // If network becomes available and we don't have any videos, fetch them
                     fetchVideos()
                 }
             }
@@ -55,7 +55,6 @@ class MainViewModel @Inject constructor(
             
             if (!_isNetworkAvailable.value) {
                 _errorMessage.value = "No internet connection available"
-                _videos.value = getSampleVideos()
                 _isLoading.value = false
                 return@launch
             }
@@ -66,36 +65,54 @@ class MainViewModel @Inject constructor(
                     perPage = 10
                 )
                 
-                // Transform the API response to our VideoItem model
-                val videoList = response.videos.map { pexelsVideo ->
-                    VideoItem(
-                        id = pexelsVideo.id,
-                        title = pexelsVideo.url.split("/").last().replace("-", " "),
-                        imageUrl = pexelsVideo.image,
-                        duration = pexelsVideo.duration,
-                        user = User(
-                            id = pexelsVideo.user.id,
-                            name = pexelsVideo.user.name,
-                            url = pexelsVideo.user.url
-                        ),
-                        videoFiles = pexelsVideo.videoFiles.map { file ->
-                            VideoFile(
-                                id = file.id,
-                                quality = file.quality,
-                                width = file.width,
-                                height = file.height,
-                                link = file.link
+                // Check if response or videos list is valid
+                if (response.videos.isEmpty()) {
+                    _errorMessage.value = "No videos found"
+                    _videos.value = emptyList()
+                } else {
+                    // Log for debugging
+                    println("Got ${response.videos.size} videos from API")
+                    
+                    // Transform the API response to our VideoItem model
+                    val videoList = response.videos.mapNotNull { pexelsVideo ->
+                        try {
+                            // Create video files list safely
+                            val videoFiles = pexelsVideo.videoFiles?.map { file ->
+                                VideoFile(
+                                    id = file.id,
+                                    quality = file.quality,
+                                    width = file.width,
+                                    height = file.height,
+                                    link = file.link
+                                )
+                            } ?: emptyList()
+                            
+                            // Create the video item
+                            VideoItem(
+                                id = pexelsVideo.id,
+                                title = pexelsVideo.url.split("/").lastOrNull()?.replace("-", " ") ?: "Untitled Video",
+                                imageUrl = pexelsVideo.image,
+                                duration = pexelsVideo.duration,
+                                user = User(
+                                    id = pexelsVideo.user.id,
+                                    name = pexelsVideo.user.name,
+                                    url = pexelsVideo.user.url
+                                ),
+                                videoFiles = videoFiles
                             )
+                        } catch (e: Exception) {
+                            println("Error mapping video: ${e.message}")
+                            null
                         }
-                    )
+                    }
+                    
+                    println("Mapped ${videoList.size} videos successfully")
+                    _videos.value = videoList
                 }
-                
-                _videos.value = videoList
             } catch (e: Exception) {
+                println("API error: ${e.message}")
+                e.printStackTrace()
                 _errorMessage.value = "Failed to load videos: ${e.message}"
-                if (_videos.value.isEmpty()) {
-                    _videos.value = getSampleVideos()
-                }
             } finally {
                 _isLoading.value = false
             }
@@ -104,56 +121,5 @@ class MainViewModel @Inject constructor(
     
     fun retryFetchVideos() {
         fetchVideos()
-    }
-    
-    private fun getSampleVideos(): List<VideoItem> {
-        val sampleVideoFiles = listOf(
-            VideoFile(
-                id = 1,
-                quality = "hd",
-                width = 1920,
-                height = 1080,
-                link = "https://example.com/video.mp4"
-            )
-        )
-        
-        return listOf(
-            VideoItem(
-                id = 1,
-                title = "Beautiful Ocean Waves",
-                imageUrl = "https://images.pexels.com/videos/3571264/free-video-3571264.jpg?auto=compress&cs=tinysrgb&fit=crop&h=630&w=1200",
-                duration = 30,
-                user = User(
-                    id = 1,
-                    name = "Nature Explorer",
-                    url = "https://example.com/user"
-                ),
-                videoFiles = sampleVideoFiles
-            ),
-            VideoItem(
-                id = 2,
-                title = "Mountain Landscape",
-                imageUrl = "https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-                duration = 45,
-                user = User(
-                    id = 2,
-                    name = "Mountain View",
-                    url = "https://example.com/user2"
-                ),
-                videoFiles = sampleVideoFiles
-            ),
-            VideoItem(
-                id = 3,
-                title = "Sunset at the Beach",
-                imageUrl = "https://images.pexels.com/photos/1032650/pexels-photo-1032650.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
-                duration = 20,
-                user = User(
-                    id = 3,
-                    name = "Sunset Photographer",
-                    url = "https://example.com/user3"
-                ),
-                videoFiles = sampleVideoFiles
-            )
-        )
     }
 } 

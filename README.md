@@ -18,4 +18,8 @@ https://www.pexels.com/api/documentation/
 - Dependency injection with Hilt
 
 # Connectivity 
-![image](https://github.com/user-attachments/assets/336a58b7-46c2-41cf-a777-1fd70130573e)
+- Network state monitoring via NetworkConnectivityManager
+- Automatic detection of connectivity changes through NetworkCallback
+- Offline support with fallback sample video content
+- Error handling with user-friendly messages and retry option
+- Auto-retry when connection is restored

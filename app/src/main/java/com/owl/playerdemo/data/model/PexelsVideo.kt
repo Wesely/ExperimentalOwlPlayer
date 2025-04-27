@@ -1,5 +1,7 @@
 package com.owl.playerdemo.data.model
 
+import com.google.gson.annotations.SerializedName
+
 data class PexelsVideo(
     val id: Int,
     val width: Int,
@@ -8,8 +10,12 @@ data class PexelsVideo(
     val image: String,
     val duration: Int,
     val user: PexelsUser,
-    val videoFiles: List<VideoFile>,
-    val videoPictures: List<VideoPicture>
+    
+    @SerializedName("video_files")
+    val videoFiles: List<VideoFile>? = null,
+    
+    @SerializedName("video_pictures")
+    val videoPictures: List<VideoPicture>? = null
 )
 
 data class PexelsUser(
@@ -20,12 +26,18 @@ data class PexelsUser(
 
 data class VideoFile(
     val id: Int,
+    
+    @SerializedName("quality")
     val quality: String,
+    
+    @SerializedName("file_type")
     val fileType: String,
+    
     val width: Int,
     val height: Int,
-    val fps: Int,
-    val link: String
+    val fps: Double,
+    val link: String,
+    val size: Long
 )
 
 data class VideoPicture(
