@@ -49,7 +49,7 @@ tions as specified in [Kotlin Coding Conventions](mdc:https:/kotlinlang.org/docs
 ## Git Workflow
 - Commit messages must be in English
 - Follow the conventional commits format: `<type>: <description>`
-- Types include: feat, fix, refactor, docs, style, test, chore
+- Categorize commits with types include: feat, fix, refactor, docs, style, test, chore
 - Create feature branches from develop branch
 - Use pull requests for code reviews before merging
 - Maintain a clean commit history with atomic commits
