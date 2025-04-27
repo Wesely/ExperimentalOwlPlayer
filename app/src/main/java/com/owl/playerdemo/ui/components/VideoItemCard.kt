@@ -90,15 +90,6 @@ fun VideoItemCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = video.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = Color.DarkGray
-            )
-
-            Text(
                 text = "By ${video.user.name}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.DarkGray,
@@ -118,6 +109,15 @@ fun VideoItemCard(
 
             Text(
                 text = "${video.videoFiles.firstOrNull()?.width ?: 0}×${video.videoFiles.firstOrNull()?.height ?: 0}",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            // Add file size
+            Text(
+                text = "Size: ${video.videoFiles.firstOrNull()?.getFormattedSize() ?: "Unknown"}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 1,

@@ -2,7 +2,6 @@ package com.owl.playerdemo.model
 
 data class VideoItem(
     val id: Int,
-    val title: String,
     val imageUrl: String,
     val duration: Int,
     val user: User,
@@ -20,5 +19,12 @@ data class VideoFile(
     val quality: String,
     val width: Int,
     val height: Int,
-    val link: String
-) 
+    val link: String,
+    val size: Long
+) {
+    // Format file size in a human-readable format (MB)
+    fun getFormattedSize(): String {
+        val mb = size / 1024.0 / 1024.0
+        return String.format("%.1f MB", mb)
+    }
+} 

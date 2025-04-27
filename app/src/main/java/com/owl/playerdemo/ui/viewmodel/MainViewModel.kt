@@ -83,14 +83,14 @@ class MainViewModel @Inject constructor(
                                     quality = file.quality,
                                     width = file.width,
                                     height = file.height,
-                                    link = file.link
+                                    link = file.link,
+                                    size = file.size
                                 )
                             } ?: emptyList()
                             
                             // Create the video item
                             VideoItem(
                                 id = pexelsVideo.id,
-                                title = pexelsVideo.url.split("/").lastOrNull()?.replace("-", " ") ?: "Untitled Video",
                                 imageUrl = pexelsVideo.image,
                                 duration = pexelsVideo.duration,
                                 user = User(
