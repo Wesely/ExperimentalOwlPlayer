@@ -32,11 +32,4 @@ data class VideoPicture(
     val id: Int,
     val picture: String,
     val nr: Int
-)
-
-data class PexelsSearchResponse(
-    val page: Int,
-    val perPage: Int,
-    val totalResults: Int,
-    val videos: List<PexelsVideo>
 ) 
