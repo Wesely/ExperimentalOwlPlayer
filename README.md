@@ -3,6 +3,27 @@
 ## Overview
 OwlPlayer is a feature-rich video player application that allows users to search, stream, and download videos from Pexels. It provides robust offline functionality, high-quality playback options, and an intuitive user interface.
 
+## Installation
+A debug build (app-debug.apk) is currently available in the project root for your convinent.
+
+## Development Environment
+For reviewers and contributors looking to build the project:
+
+- Android Studio Hedgehog (2023.1.1) or newer
+- JDK 11
+- Gradle 8.11.1
+- Kotlin 1.9.21
+- Minimum SDK: 26 (Android 8.0)
+- Target SDK: 35 (Android 15)
+- Compose UI toolkit
+- Hilt for dependency injection
+
+To build the project:
+1. Clone the repository
+2. Open in Android Studio
+3. Sync Gradle files
+4. Build using the standard Android Studio build process
+
 ## Architecture
 The application follows modern Android development best practices:
 - MVVM architecture with Clean Architecture principles
