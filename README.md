@@ -9,6 +9,7 @@ The application follows modern Android development best practices:
 - Repository pattern for data operations
 - Retrofit + OkHttp for network communication
 - Dependency injection using Hilt
+- AndroidX Media3 ExoPlayer for video playback and UI components
 
 ## API Endpoints
 The application integrates with two main Pexels API endpoints:
