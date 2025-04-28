@@ -75,6 +75,10 @@ dependencies {
     // Kotlin Serialization
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
     
+    // Fetch2 Download Library
+    implementation("com.github.tonyofrancis.Fetch:fetch2:3.4.1")
+    implementation("com.github.tonyofrancis.Fetch:fetch2okhttp:3.4.1") // OkHttp integration
+    
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)

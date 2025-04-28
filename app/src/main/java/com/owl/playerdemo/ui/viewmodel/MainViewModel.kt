@@ -35,15 +35,13 @@ class MainViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage
     
-    // Expose downloaded videos from repository
-    val downloadedVideos: StateFlow<Map<Int, DownloadedVideo>> = downloadRepository.downloadedVideos
-    
     // Track downloads in progress (videoId to progress percentage 0-100)
     private val _downloadsInProgress = MutableStateFlow<Map<Int, Float>>(emptyMap())
     val downloadsInProgress: StateFlow<Map<Int, Float>> = _downloadsInProgress
 
     init {
         observeNetworkConnectivity()
+        observeDownloadProgress()
     }
     
     private fun observeNetworkConnectivity() {
@@ -56,6 +54,24 @@ class MainViewModel @Inject constructor(
                 }
             }
         }
+    }
+    
+    /**
+     * Observe download progress from repository
+     */
+    private fun observeDownloadProgress() {
+        viewModelScope.launch {
+            downloadRepository.downloadProgress.collectLatest { progressMap ->
+                _downloadsInProgress.value = progressMap
+            }
+        }
+    }
+    
+    /**
+     * Download a video using Fetch2 via repository
+     */
+    fun downloadVideo(videoId: Int, videoUrl: String, filePath: String, fileName: String) {
+        downloadRepository.downloadVideo(videoId, videoUrl, filePath)
     }
     
     /**
@@ -73,16 +89,6 @@ class MainViewModel @Inject constructor(
     }
     
     /**
-     * Save downloaded video information
-     */
-    fun saveDownloadedVideo(videoId: Int, localFilePath: String, fileName: String) {
-        downloadRepository.saveDownloadedVideo(videoId, localFilePath, fileName)
-        
-        // Remove from in-progress downloads
-        removeDownloadProgress(videoId)
-    }
-    
-    /**
      * Remove a downloaded video
      */
     fun removeDownloadedVideo(videoId: Int) {
@@ -97,35 +103,10 @@ class MainViewModel @Inject constructor(
     }
     
     /**
-     * Update the download progress for a video
-     * @param videoId The ID of the video being downloaded
-     * @param progress Download progress as a percentage (0-100)
+     * Clean up any resources
      */
-    fun updateDownloadProgress(videoId: Int, progress: Float) {
-        val updatedMap = _downloadsInProgress.value.toMutableMap()
-        updatedMap[videoId] = progress
-        _downloadsInProgress.value = updatedMap
-        
-        // Log progress
-        println("Download progress for video $videoId: $progress%")
-    }
-    
-    /**
-     * Remove a video from the in-progress downloads
-     * @param videoId The ID of the video to remove
-     */
-    fun removeDownloadProgress(videoId: Int) {
-        val updatedMap = _downloadsInProgress.value.toMutableMap()
-        updatedMap.remove(videoId)
-        _downloadsInProgress.value = updatedMap
-    }
-    
-    /**
-     * Start tracking a download
-     * @param videoId The ID of the video to track
-     */
-    fun startTrackingDownload(videoId: Int) {
-        updateDownloadProgress(videoId, 0f)
+    fun cleanupDownloads() {
+        downloadRepository.cleanup()
     }
 
     fun fetchVideos() {
