@@ -68,9 +68,9 @@ class MainViewModel @Inject constructor(
     }
     
     /**
-     * Download a video using Fetch2 via repository
+     * Download a video using OkHttp via repository
      */
-    fun downloadVideo(videoId: Int, videoUrl: String, filePath: String, fileName: String) {
+    fun downloadVideo(videoId: Int, videoUrl: String, filePath: String, fileName: String? = null) {
         downloadRepository.downloadVideo(videoId, videoUrl, filePath)
     }
     

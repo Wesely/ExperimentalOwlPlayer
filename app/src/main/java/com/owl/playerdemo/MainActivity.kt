@@ -148,7 +148,7 @@ fun VideoScreen(viewModel: MainViewModel) {
 }
 
 /**
- * Download a video using Fetch2 via ViewModel
+ * Download a video using OkHttp via ViewModel
  */
 private fun downloadVideo(context: Context, video: VideoItem, viewModel: MainViewModel) {
     val bestVideo = video.videoFiles.firstOrNull() ?: run {
@@ -173,7 +173,7 @@ private fun downloadVideo(context: Context, video: VideoItem, viewModel: MainVie
     }
     
     // Start the download
-    viewModel.downloadVideo(video.id, bestVideo.link, localFilePath, fileName)
+    viewModel.downloadVideo(video.id, bestVideo.link, localFilePath)
     
     Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
 }

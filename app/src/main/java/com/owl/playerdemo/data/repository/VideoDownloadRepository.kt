@@ -2,22 +2,33 @@ package com.owl.playerdemo.data.repository
 
 import android.content.Context
 import com.owl.playerdemo.model.DownloadedVideo
-import com.tonyofrancis.fetch2.*
-import com.tonyofrancis.fetch2.fetch.FetchConfiguration
-import com.tonyofrancis.fetch2.fetch.FetchListener
-import com.tonyofrancis.fetch2okhttp.OkHttpDownloader
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 /**
- * Repository responsible for managing downloaded videos using Fetch2 library
+ * Repository responsible for managing downloaded videos using OkHttp
  */
 @Singleton
 class VideoDownloadRepository @Inject constructor(
@@ -32,122 +43,21 @@ class VideoDownloadRepository @Inject constructor(
     private val _downloadedVideos = MutableStateFlow<Map<Int, DownloadedVideo>>(emptyMap())
     val downloadedVideos: StateFlow<Map<Int, DownloadedVideo>> = _downloadedVideos
     
-    // Fetch instance for downloads
-    private val fetch: Fetch
+    // Track download progress (videoId to progress percentage 0-100)
+    private val _downloadProgress = MutableStateFlow<Map<Int, Float>>(emptyMap())
+    val downloadProgress: StateFlow<Map<Int, Float>> = _downloadProgress
     
-    // Map to track Fetch Request IDs to our Video IDs
-    private val requestToVideoIdMap = mutableMapOf<Int, Int>()
+    // Map to track active downloads (videoId to call)
+    private val activeDownloads = mutableMapOf<Int, Call>()
+    
+    // OkHttp client for downloads
+    private val okHttpClient = OkHttpClient.Builder()
+        .build()
+        
+    // CoroutineScope for download operations
+    private val downloadScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     init {
-        // Configure and initialize Fetch
-        val fetchConfiguration = FetchConfiguration.Builder(context)
-            .setDownloadConcurrentLimit(3)
-            .enableLogging(true)
-            .setHttpDownloader(OkHttpDownloader(OkHttpClient.Builder().build()))
-            .build()
-            
-        fetch = Fetch.Impl.getInstance(fetchConfiguration)
-        
-        // Register listener for download events
-        fetch.addListener(object : FetchListener {
-            override fun onAdded(download: Download) {
-                println("Download added: ${download.id}")
-            }
-
-            override fun onCancelled(download: Download) {
-                println("Download cancelled: ${download.id}")
-                val videoId = requestToVideoIdMap[download.id]
-                if (videoId != null) {
-                    removeDownloadedVideo(videoId)
-                }
-            }
-
-            override fun onCompleted(download: Download) {
-                val videoId = requestToVideoIdMap[download.id]
-                if (videoId != null) {
-                    // Update the download status to indicate it's fully downloaded
-                    val currentDownload = _downloadedVideos.value[videoId]
-                    if (currentDownload != null) {
-                        val updatedDownload = currentDownload.copy(
-                            localFilePath = download.file
-                        )
-                        val updatedMap = _downloadedVideos.value.toMutableMap()
-                        updatedMap[videoId] = updatedDownload
-                        _downloadedVideos.value = updatedMap
-                        persistDownloadedVideos()
-                    }
-                }
-                println("Download completed: ${download.id}, file: ${download.file}")
-            }
-
-            override fun onDeleted(download: Download) {
-                println("Download deleted: ${download.id}")
-                val videoId = requestToVideoIdMap[download.id]
-                if (videoId != null) {
-                    removeDownloadedVideo(videoId)
-                    requestToVideoIdMap.remove(download.id)
-                }
-            }
-
-            override fun onDownloadBlockUpdated(
-                download: Download,
-                downloadBlock: DownloadBlock,
-                totalBlocks: Int
-            ) {
-                // Optional: Track individual download blocks if needed
-            }
-
-            override fun onError(download: Download, error: Error, throwable: Throwable?) {
-                println("Download error: ${download.id}, error: ${error.name}, message: ${throwable?.message}")
-            }
-
-            override fun onPaused(download: Download) {
-                println("Download paused: ${download.id}")
-            }
-
-            override fun onProgress(
-                download: Download,
-                etaInMilliSeconds: Long,
-                downloadedBytesPerSecond: Long
-            ) {
-                println("Download progress: ${download.id}, progress: ${download.progress}%, ETA: ${etaInMilliSeconds/1000}s, speed: ${downloadedBytesPerSecond/1024} KB/s")
-                
-                // We can optionally update our state if needed to track progress
-                val videoId = requestToVideoIdMap[download.id]
-                videoId?.let {
-                    // You could track progress here if needed
-                }
-            }
-
-            override fun onQueued(download: Download, waitingOnNetwork: Boolean) {
-                println("Download queued: ${download.id}, waiting on network: $waitingOnNetwork")
-            }
-
-            override fun onRemoved(download: Download) {
-                println("Download removed: ${download.id}")
-                val videoId = requestToVideoIdMap[download.id]
-                if (videoId != null) {
-                    requestToVideoIdMap.remove(download.id)
-                }
-            }
-
-            override fun onResumed(download: Download) {
-                println("Download resumed: ${download.id}")
-            }
-
-            override fun onStarted(
-                download: Download,
-                downloadBlocks: List<DownloadBlock>,
-                totalBlocks: Int
-            ) {
-                println("Download started: ${download.id}")
-            }
-
-            override fun onWaitingNetwork(download: Download) {
-                println("Download waiting for network: ${download.id}")
-            }
-        })
-        
         loadDownloadedVideos()
     }
 
@@ -189,27 +99,162 @@ class VideoDownloadRepository @Inject constructor(
     }
     
     /**
-     * Download a video using Fetch
+     * Download a video using OkHttp
      * @param videoId ID of the video to download
      * @param url URL to download from
      * @param destinationPath Full path where the video should be saved
-     * @param fileName Name of the file
-     * @return The request ID from Fetch
+     * @return The request ID
      */
-    fun downloadVideo(videoId: Int, url: String, destinationPath: String, fileName: String): Int {
-        // Create a new Fetch request
-        val request = Request(url, destinationPath)
-        request.priority = Priority.HIGH
-        request.networkType = NetworkType.ALL
+    fun downloadVideo(videoId: Int, url: String, destinationPath: String): Int {
+        // Check if we're already downloading this video
+        if (activeDownloads.containsKey(videoId)) {
+            return videoId
+        }
         
-        // Start the download
-        val fetchRequestId = fetch.enqueue(request)
-        requestToVideoIdMap[fetchRequestId] = videoId
+        // Create the destination file
+        val destinationFile = File(destinationPath)
         
-        // Save download info
-        saveDownloadedVideo(videoId, destinationPath, fileName)
+        // Create parent directories if they don't exist
+        destinationFile.parentFile?.mkdirs()
         
-        return fetchRequestId
+        // Build the request
+        val request = Request.Builder()
+            .url(url)
+            .build()
+        
+        // Extract filename from path
+        val fileName = destinationFile.name
+        
+        // Create the download call
+        val call = okHttpClient.newCall(request)
+        
+        // Store the call for potential cancellation
+        activeDownloads[videoId] = call
+        
+        // Update progress to indicate download started
+        updateDownloadProgress(videoId, 0f)
+        
+        // Start the download in a coroutine
+        downloadScope.launch {
+            try {
+                // Execute the network call
+                call.enqueue(object : Callback {
+                    override fun onFailure(call: Call, e: IOException) {
+                        // Handle failure
+                        downloadScope.launch {
+                            activeDownloads.remove(videoId)
+                            updateDownloadProgress(videoId, -1f) // Negative value indicates error
+                        }
+                        e.printStackTrace()
+                    }
+
+                    override fun onResponse(call: Call, response: Response) {
+                        if (!response.isSuccessful) {
+                            // Handle unsuccessful response
+                            downloadScope.launch {
+                                activeDownloads.remove(videoId)
+                                updateDownloadProgress(videoId, -1f)
+                            }
+                            return
+                        }
+
+                        // Get content length for progress tracking
+                        val contentLength = response.body?.contentLength() ?: -1L
+                        var bytesDownloaded = 0L
+                        
+                        try {
+                            // Create output stream to save the file
+                            FileOutputStream(destinationFile).use { outputStream ->
+                                response.body?.let { body ->
+                                    body.byteStream().use { inputStream ->
+                                        val buffer = ByteArray(8192)
+                                        var bytesRead: Int
+                                        
+                                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                            // Write to file
+                                            outputStream.write(buffer, 0, bytesRead)
+                                            
+                                            // Update progress
+                                            bytesDownloaded += bytesRead
+                                            if (contentLength > 0) {
+                                                val progress = bytesDownloaded.toFloat() / contentLength.toFloat() * 100f
+                                                updateDownloadProgress(videoId, progress)
+                                            }
+                                        }
+                                        
+                                        outputStream.flush()
+                                    }
+                                }
+                                
+                                // Download completed successfully
+                                downloadScope.launch {
+                                    // Save download info
+                                    saveDownloadedVideo(videoId, destinationPath, fileName)
+                                    
+                                    // Remove from active downloads
+                                    activeDownloads.remove(videoId)
+                                    
+                                    // Set progress to 100%
+                                    updateDownloadProgress(videoId, 100f)
+                                }
+                            }
+                        } catch (e: IOException) {
+                            // Handle file I/O errors
+                            downloadScope.launch {
+                                activeDownloads.remove(videoId)
+                                updateDownloadProgress(videoId, -1f)
+                            }
+                            e.printStackTrace()
+                            
+                            // Clean up partial file if it exists
+                            if (destinationFile.exists()) {
+                                destinationFile.delete()
+                            }
+                        }
+                    }
+                })
+            } catch (e: Exception) {
+                // Handle any other exceptions
+                activeDownloads.remove(videoId)
+                updateDownloadProgress(videoId, -1f)
+                e.printStackTrace()
+            }
+        }
+        
+        return videoId
+    }
+    
+    /**
+     * Cancel an active download
+     * @param videoId ID of the video download to cancel
+     */
+    fun cancelDownload(videoId: Int) {
+        val call = activeDownloads[videoId]
+        call?.let {
+            if (!it.isCanceled()) {
+                it.cancel()
+            }
+            activeDownloads.remove(videoId)
+            updateDownloadProgress(videoId, -1f)
+        }
+    }
+    
+    /**
+     * Update the download progress
+     * @param videoId ID of the video
+     * @param progress Progress percentage (0-100)
+     */
+    private fun updateDownloadProgress(videoId: Int, progress: Float) {
+        val updatedMap = _downloadProgress.value.toMutableMap()
+        
+        if (progress < 0 || progress >= 100) {
+            // Remove progress for completed or failed downloads
+            updatedMap.remove(videoId)
+        } else {
+            updatedMap[videoId] = progress
+        }
+        
+        _downloadProgress.value = updatedMap
     }
     
     /**
@@ -239,12 +284,27 @@ class VideoDownloadRepository @Inject constructor(
      * @param videoId ID of the video to remove
      */
     fun removeDownloadedVideo(videoId: Int) {
+        // Cancel download if active
+        cancelDownload(videoId)
+        
+        // Get the local file path
+        val localFilePath = _downloadedVideos.value[videoId]?.localFilePath
+        
+        // Remove from state
         val updatedMap = _downloadedVideos.value.toMutableMap()
         updatedMap.remove(videoId)
         _downloadedVideos.value = updatedMap
         
         // Update SharedPreferences
         persistDownloadedVideos()
+        
+        // Delete the local file if it exists
+        localFilePath?.let {
+            val file = File(it)
+            if (file.exists()) {
+                file.delete()
+            }
+        }
     }
     
     /**
@@ -272,6 +332,18 @@ class VideoDownloadRepository @Inject constructor(
      * Clean up any resources when the repository is no longer needed
      */
     fun cleanup() {
-        fetch.close()
+        // Cancel all active downloads
+        activeDownloads.forEach { (_, call) ->
+            if (!call.isCanceled()) {
+                call.cancel()
+            }
+        }
+        activeDownloads.clear()
+        
+        // Clear download progress
+        _downloadProgress.value = emptyMap()
+        
+        // Cancel the download scope
+        downloadScope.cancel()
     }
 } 

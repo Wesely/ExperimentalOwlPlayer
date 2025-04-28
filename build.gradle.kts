@@ -6,12 +6,4 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     alias(libs.plugins.hilt) apply false
 }
-
-// Add JitPack repository
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
-    }
-}
+// IMPORTANT!! move repository declarations from the project-level build.gradle.kts to the settings.gradle.kts file. to avoud  the error "Build was configured to prefer settings repositories over project repositories but repository 'Google' was added by build file 'build.gradle.kts'"
