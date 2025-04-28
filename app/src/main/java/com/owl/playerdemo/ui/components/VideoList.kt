@@ -12,6 +12,8 @@ import com.owl.playerdemo.model.VideoItem
 @Composable
 fun VideoList(
     videos: List<VideoItem>,
+    onDownloadClick: (VideoItem) -> Unit = {},
+    onPlayClick: (VideoItem) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -29,6 +31,8 @@ fun VideoList(
             videos.forEach { video ->
                 VideoItemCard(
                     video = video,
+                    onDownloadClick = onDownloadClick,
+                    onPlayClick = onPlayClick,
                     modifier = Modifier
                 )
             }

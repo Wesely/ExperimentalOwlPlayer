@@ -37,6 +37,10 @@ class MainViewModel @Inject constructor(
     
     // Expose downloaded videos from repository
     val downloadedVideos: StateFlow<Map<Int, DownloadedVideo>> = downloadRepository.downloadedVideos
+    
+    // Track downloads in progress (videoId to progress percentage 0-100)
+    private val _downloadsInProgress = MutableStateFlow<Map<Int, Float>>(emptyMap())
+    val downloadsInProgress: StateFlow<Map<Int, Float>> = _downloadsInProgress
 
     init {
         observeNetworkConnectivity()
@@ -73,6 +77,9 @@ class MainViewModel @Inject constructor(
      */
     fun saveDownloadedVideo(videoId: Int, localFilePath: String, fileName: String) {
         downloadRepository.saveDownloadedVideo(videoId, localFilePath, fileName)
+        
+        // Remove from in-progress downloads
+        removeDownloadProgress(videoId)
     }
     
     /**
@@ -87,6 +94,38 @@ class MainViewModel @Inject constructor(
      */
     fun getAllDownloadedVideos(): List<DownloadedVideo> {
         return downloadRepository.getAllDownloadedVideos()
+    }
+    
+    /**
+     * Update the download progress for a video
+     * @param videoId The ID of the video being downloaded
+     * @param progress Download progress as a percentage (0-100)
+     */
+    fun updateDownloadProgress(videoId: Int, progress: Float) {
+        val updatedMap = _downloadsInProgress.value.toMutableMap()
+        updatedMap[videoId] = progress
+        _downloadsInProgress.value = updatedMap
+        
+        // Log progress
+        println("Download progress for video $videoId: $progress%")
+    }
+    
+    /**
+     * Remove a video from the in-progress downloads
+     * @param videoId The ID of the video to remove
+     */
+    fun removeDownloadProgress(videoId: Int) {
+        val updatedMap = _downloadsInProgress.value.toMutableMap()
+        updatedMap.remove(videoId)
+        _downloadsInProgress.value = updatedMap
+    }
+    
+    /**
+     * Start tracking a download
+     * @param videoId The ID of the video to track
+     */
+    fun startTrackingDownload(videoId: Int) {
+        updateDownloadProgress(videoId, 0f)
     }
 
     fun fetchVideos() {
