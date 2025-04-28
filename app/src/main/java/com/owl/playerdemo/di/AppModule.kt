@@ -1,6 +1,8 @@
 package com.owl.playerdemo.di
 
 import android.content.Context
+import com.owl.playerdemo.data.repository.VideoDownloadRepository
+import com.owl.playerdemo.data.service.VideoService
 import com.owl.playerdemo.data.util.NetworkConnectivityManager
 import dagger.Module
 import dagger.Provides
@@ -20,5 +22,13 @@ object AppModule {
         @ApplicationContext context: Context
     ): NetworkConnectivityManager {
         return NetworkConnectivityManager(context)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideVideoService(
+        videoDownloadRepository: VideoDownloadRepository
+    ): VideoService {
+        return VideoService(videoDownloadRepository)
     }
 } 
