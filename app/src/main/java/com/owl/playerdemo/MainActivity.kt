@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.owl.playerdemo.model.VideoItem
 import com.owl.playerdemo.ui.components.VideoList
+import com.owl.playerdemo.ui.player.PlayerActivity
 import com.owl.playerdemo.ui.theme.OwlPlayerDemoTheme
 import com.owl.playerdemo.ui.viewmodel.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -75,6 +76,7 @@ fun VideoScreen(viewModel: MainViewModel) {
     val isLoading by viewModel.isLoading.collectAsState()
     val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val downloadsInProgress by viewModel.downloadsInProgress.collectAsState()
     
     LaunchedEffect(Unit) {
         viewModel.fetchVideos()
@@ -128,8 +130,7 @@ fun VideoScreen(viewModel: MainViewModel) {
                             downloadVideo(context, video, viewModel)
                         },
                         onPlayClick = { video ->
-                            // Show toast for now (we'll implement playback later)
-                            Toast.makeText(context, "Playing ${video.user.name}'s video", Toast.LENGTH_SHORT).show()
+                            playVideo(context, video, viewModel)
                         },
                         modifier = Modifier
                     )
@@ -173,9 +174,35 @@ private fun downloadVideo(context: Context, video: VideoItem, viewModel: MainVie
     }
     
     // Start the download
-    viewModel.downloadVideo(video.id, bestVideo.link, localFilePath)
+    viewModel.downloadVideo(video.id, bestVideo.link, localFilePath, fileName)
     
     Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
+}
+
+/**
+ * Play a locally downloaded video
+ */
+private fun playVideo(context: Context, video: VideoItem, viewModel: MainViewModel) {
+    // Check if the video is downloaded
+    if (!viewModel.isVideoDownloaded(video.id)) {
+        Toast.makeText(context, "Please download the video first", Toast.LENGTH_SHORT).show()
+        return
+    }
+    
+    // Get local file path
+    val videoPath = viewModel.getLocalVideoPath(video.id)
+    
+    if (videoPath == null) {
+        Toast.makeText(context, "Cannot find downloaded video", Toast.LENGTH_SHORT).show()
+        return
+    }
+    
+    // Create title from video information
+    val videoTitle = "${video.user.name}'s video"
+    
+    // Launch player activity
+    val intent = PlayerActivity.createIntent(context, videoPath, videoTitle)
+    context.startActivity(intent)
 }
 
 @Composable
