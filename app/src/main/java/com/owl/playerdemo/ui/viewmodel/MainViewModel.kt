@@ -38,6 +38,9 @@ class MainViewModel @Inject constructor(
     // Track downloads in progress (videoId to progress percentage 0-100)
     private val _downloadsInProgress = MutableStateFlow<Map<Int, Float>>(emptyMap())
     val downloadsInProgress: StateFlow<Map<Int, Float>> = _downloadsInProgress
+    
+    // Expose downloaded videos as a StateFlow
+    val downloadedVideos: StateFlow<Map<Int, DownloadedVideo>> = downloadRepository.downloadedVideos
 
     init {
         observeNetworkConnectivity()

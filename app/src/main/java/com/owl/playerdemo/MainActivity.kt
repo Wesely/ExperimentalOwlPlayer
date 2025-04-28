@@ -9,19 +9,31 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,6 +89,28 @@ fun VideoScreen(viewModel: MainViewModel) {
     val isNetworkAvailable by viewModel.isNetworkAvailable.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val downloadsInProgress by viewModel.downloadsInProgress.collectAsState()
+    val downloadedVideos by viewModel.downloadedVideos.collectAsState()
+    
+    // Calculate total storage used by downloaded videos
+    val totalStorageUsed = remember(downloadedVideos) {
+        downloadedVideos.values.sumOf { 
+            val file = File(it.localFilePath)
+            if (file.exists()) file.length() else 0L
+        }
+    }
+    
+    // Format storage size
+    val formattedStorage = remember(totalStorageUsed) {
+        val mb = totalStorageUsed / 1024.0 / 1024.0
+        String.format("%.1f MB", mb)
+    }
+    
+    // State for delete confirmation dialog
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var videoToDelete by remember { mutableStateOf<VideoItem?>(null) }
+    
+    // State for storage info dialog
+    var showStorageInfoDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         viewModel.fetchVideos()
@@ -86,14 +120,29 @@ fun VideoScreen(viewModel: MainViewModel) {
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Header
-        Text(
-            text = "Trending Nature Videos",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.DarkGray,
-            modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-        )
+        // Header with info icon
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = "Trending Nature Videos",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(onClick = { showStorageInfoDialog = true }) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Storage Information",
+                    tint = Color.DarkGray
+                )
+            }
+        }
 
         // Network Status Indicator
         if (!isNetworkAvailable) {
@@ -105,11 +154,27 @@ fun VideoScreen(viewModel: MainViewModel) {
             )
         }
         
+        // Storage Usage Dialog
+        if (showStorageInfoDialog) {
+            AlertDialog(
+                onDismissRequest = { showStorageInfoDialog = false },
+                title = { Text("Storage Information") },
+                text = { 
+                    Text("Storage Used: $formattedStorage (${downloadedVideos.size} videos)") 
+                },
+                confirmButton = {
+                    TextButton(onClick = { showStorageInfoDialog = false }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+        
         // Loading, Error or Content
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
             when {
@@ -132,6 +197,11 @@ fun VideoScreen(viewModel: MainViewModel) {
                         onPlayClick = { video ->
                             playVideo(context, video, viewModel)
                         },
+                        onDeleteClick = { video ->
+                            // Show delete confirmation dialog
+                            videoToDelete = video
+                            showDeleteDialog = true
+                        },
                         modifier = Modifier
                     )
                 }
@@ -145,6 +215,45 @@ fun VideoScreen(viewModel: MainViewModel) {
                 }
             }
         }
+    }
+    
+    // Delete confirmation dialog
+    if (showDeleteDialog && videoToDelete != null) {
+        val video = videoToDelete!!
+        
+        // Get actual file size from the local file
+        val localFilePath = viewModel.getLocalVideoPath(video.id)
+        val fileSize = getFormattedFileSize(localFilePath)
+        
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Downloaded Video") },
+            text = { 
+                Text("Do you want to remove this video from local storage? This will free ($fileSize) storage but you will need to download it again to play it.") 
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        // Delete the video
+                        deleteVideo(context, video, viewModel)
+                        showDeleteDialog = false
+                        videoToDelete = null
+                    }
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        showDeleteDialog = false
+                        videoToDelete = null 
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -203,6 +312,43 @@ private fun playVideo(context: Context, video: VideoItem, viewModel: MainViewMod
     // Launch player activity
     val intent = PlayerActivity.createIntent(context, videoPath, videoTitle)
     context.startActivity(intent)
+}
+
+/**
+ * Get the formatted size of a file
+ * @param filePath Path to the file
+ * @return Formatted size string (e.g. "10.5 MB")
+ */
+private fun getFormattedFileSize(filePath: String?): String {
+    if (filePath == null) return "Unknown"
+    
+    val file = File(filePath)
+    if (!file.exists()) return "Unknown"
+    
+    val bytes = file.length()
+    val mb = bytes / 1024.0 / 1024.0
+    return String.format("%.1f MB", mb)
+}
+
+/**
+ * Delete a downloaded video
+ */
+private fun deleteVideo(context: Context, video: VideoItem, viewModel: MainViewModel) {
+    if (viewModel.isVideoDownloaded(video.id)) {
+        // Get the local file path
+        val localFilePath = viewModel.getLocalVideoPath(video.id)
+        
+        // Get the actual file size before deletion for confirmation message
+        val fileSize = getFormattedFileSize(localFilePath)
+        
+        // Delete the video
+        viewModel.removeDownloadedVideo(video.id)
+        
+        // Show success message with the freed space
+        Toast.makeText(context, "Video deleted. Freed $fileSize of storage.", Toast.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(context, "Video is not downloaded", Toast.LENGTH_SHORT).show()
+    }
 }
 
 @Composable

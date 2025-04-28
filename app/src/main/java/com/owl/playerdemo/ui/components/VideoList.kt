@@ -14,6 +14,7 @@ fun VideoList(
     videos: List<VideoItem>,
     onDownloadClick: (VideoItem) -> Unit = {},
     onPlayClick: (VideoItem) -> Unit = {},
+    onDeleteClick: (VideoItem) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -33,6 +34,7 @@ fun VideoList(
                     video = video,
                     onDownloadClick = onDownloadClick,
                     onPlayClick = onPlayClick,
+                    onDeleteClick = onDeleteClick,
                     modifier = Modifier
                 )
             }

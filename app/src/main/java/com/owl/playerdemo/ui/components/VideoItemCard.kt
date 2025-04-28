@@ -1,6 +1,5 @@
 package com.owl.playerdemo.ui.components
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +17,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -34,20 +32,22 @@ fun VideoItemCard(
     video: VideoItem,
     onDownloadClick: (VideoItem) -> Unit = {},
     onPlayClick: (VideoItem) -> Unit = {},
+    onDeleteClick: (VideoItem) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: MainViewModel = viewModel()
 ) {
-    // Check if this video is already downloaded
-    val isDownloaded = viewModel.isVideoDownloaded(video.id)
-    
+    // Observe downloaded videos to ensure immediate UI updates
+    val downloadedVideos by viewModel.downloadedVideos.collectAsState()
+    val isDownloaded = downloadedVideos.containsKey(video.id)
+
     // Get download progress for this video
     val downloads by viewModel.downloadsInProgress.collectAsState()
     val downloadProgress = downloads[video.id] ?: 0f
     val isDownloading = downloadProgress > 0f && downloadProgress < 100f
-    
+
     Column(
         modifier = modifier
-            .width(320.dp)
+            .width(240.dp)
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -64,6 +64,7 @@ fun VideoItemCard(
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
+
 
             // Duration indicator in bottom-left
             Box(
@@ -85,7 +86,7 @@ fun VideoItemCard(
             // Download/Play button or Progress Indicator
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.Center)
                     .padding(8.dp)
                     .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                     .size(36.dp),
@@ -101,7 +102,7 @@ fun VideoItemCard(
                                 color = Color.White,
                                 strokeWidth = 2.dp
                             )
-                            
+
                             // Show percentage in center
                             Text(
                                 text = "${downloadProgress.toInt()}%",
@@ -111,6 +112,7 @@ fun VideoItemCard(
                             )
                         }
                     }
+
                     isDownloaded -> {
                         // Play button
                         IconButton(
@@ -125,6 +127,7 @@ fun VideoItemCard(
                             )
                         }
                     }
+
                     else -> {
                         // Download button
                         IconButton(
@@ -141,8 +144,31 @@ fun VideoItemCard(
                     }
                 }
             }
-        }
 
+            // Delete button (only show if downloaded)
+            if (isDownloaded) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .background(Color.Red.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
+                        .size(36.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IconButton(
+                        onClick = { onDeleteClick(video) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_delete),
+                            contentDescription = "Delete",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+        }
         // Video Info
         Column(
             modifier = Modifier
@@ -175,7 +201,7 @@ fun VideoItemCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
+
             // Add file size
             Text(
                 text = "Size: ${video.videoFiles.firstOrNull()?.getFormattedSize() ?: "Unknown"}",
@@ -184,32 +210,6 @@ fun VideoItemCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            
-            // Show download status
-            when {
-                isDownloading -> {
-                    Text(
-                        text = "Downloading ${downloadProgress.toInt()}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Blue,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                isDownloaded -> {
-                    Text(
-                        text = "Downloaded",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Green,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
         }
     }
 } 
