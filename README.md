@@ -1,5 +1,5 @@
 # OwlPlayer
-This is a demo project developed in approximately 4 hours (3.5 hours for development and 0.5 hours for refinement, debugging, and documentation).
+This is a demo project developed in approximately 4 hours (3.5 hours for development with Cursor, and 0.5 hours for refinement, debugging, and documentation).
 
 ## Overview
 OwlPlayer is a video player that downloads videos from Pexels. Once downloaded, videos can be played offline.
