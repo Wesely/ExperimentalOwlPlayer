@@ -3,12 +3,26 @@ This is a demo project developed in approximately 4 hours (3.5 hours for develop
 
 ## Overview
 OwlPlayer is a video player that downloads videos from Pexels. Once downloaded, videos can be played offline.
-- The app is designed for landscape orientation![img.png](img.png)
+- The app is designed for landscape orientation
+
+  ![img.png](img.png)
 - We've selected nature videos from the Pexels platform. Tap the download button to start downloading
-- ![img_1.png](img_1.png) You can see when downloads start and track download progress
-- ![img_2.png](img_2.png) Once a video is downloaded, you can play or remove it to free up storage
-- ![img_3.png](img_3.png) We've also provided a storage usage information dialog
-- ![img_4.png](img_4.png) During video playback, use Android's native Back button to navigate back
+
+  ![img_1.png](img_1.png)
+
+- You can see when downloads start and track download progress
+
+  ![img_2.png](img_2.png)
+
+- Once a video is downloaded, you can play or remove it to free up storage
+
+  ![img_3.png](img_3.png)
+
+- We've also provided a storage usage information dialog
+
+  ![img_4.png](img_4.png)
+
+  During video playback, use Android's native Back button to navigate back
 
 ## Installation
 A debug build (app-debug.apk) is currently available in the project root for your convenience.
@@ -45,6 +59,7 @@ The application integrates with two main Pexels API endpoints:
 
 1. **Video Search**: `https://api.pexels.com/videos/search`
    - Used for searching videos with parameters like query, per_page, and page
+   - Currently we're displaying `query=Nature` and `per_page=10`
    - Returns video collections with metadata and available formats
 
 2. **Video by ID**: `https://api.pexels.com/videos/videos/{id}`
@@ -62,7 +77,7 @@ The application integrates with two main Pexels API endpoints:
 - Download videos for offline viewing using OkHttp for file downloads
 - Persistent storage through SharedPreferences for downloaded video metadata
 - StateFlow-based download progress tracking in real-time (0-100%)
-- Full download management with pause, resume, and cancel functionality
+- The download is performed through OkHttp, which detects network failures
 - Automatic cleanup of partial downloads on error
 
 ## Connectivity Management
@@ -72,6 +87,7 @@ The application integrates with two main Pexels API endpoints:
 
 # Future Enhancements
 - Implement exponential backoff recovery schema for critical network status issues
+- Since the Search API is paged, we can do search box and infinite scrollable list
 - Decide whether to share downloaded video content with the system's Gallery app
 - Implement Room database to create structured relationships between downloaded video files and Pexels metadata
 - Add a storage management interface for users to view and manage downloaded content
