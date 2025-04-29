@@ -1,5 +1,6 @@
 package com.owl.playerdemo.ui.components
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +28,8 @@ import com.owl.playerdemo.R
 import com.owl.playerdemo.model.VideoItem
 import com.owl.playerdemo.ui.viewmodel.MainViewModel
 
+private const val TAG = "VideoItemCard"
+
 @Composable
 fun VideoItemCard(
     video: VideoItem,
@@ -44,6 +47,8 @@ fun VideoItemCard(
     val downloads by viewModel.downloadsInProgress.collectAsState()
     val downloadProgress = downloads[video.id] ?: 0f
     val isDownloading = downloadProgress > 0f && downloadProgress < 100f
+    
+    Log.d(TAG, "Video ${video.id} - Downloaded: $isDownloaded, Downloading: $isDownloading, Progress: $downloadProgress")
 
     Column(
         modifier = modifier

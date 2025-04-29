@@ -2,6 +2,7 @@ package com.owl.playerdemo.data.service
 
 import android.content.Context
 import android.os.Environment
+import android.util.Log
 import com.owl.playerdemo.data.repository.VideoDownloadRepository
 import com.owl.playerdemo.model.VideoItem
 import java.io.File
@@ -12,51 +13,80 @@ import javax.inject.Singleton
 class VideoService @Inject constructor(
     private val downloadRepository: VideoDownloadRepository
 ) {
+    private companion object {
+        private const val TAG = "VideoService"
+    }
+    
     /**
      * Download a video
      * @return True if download started successfully, false otherwise
      */
     fun downloadVideo(context: Context, video: VideoItem): Boolean {
-        val bestVideo = video.videoFiles.firstOrNull() ?: return false
+        val bestVideo = video.videoFiles.firstOrNull()
         
-        // Create download directory if it doesn't exist
-        val downloadDir = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), "OwlPlayer")
-        if (!downloadDir.exists()) {
-            downloadDir.mkdirs()
-        }
-        
-        // Create unique filename based on video ID and quality
-        val fileName = "video_${video.id}_${bestVideo.quality}.mp4"
-        val localFilePath = "${downloadDir.absolutePath}/$fileName"
-        
-        // Check if already downloading or downloaded
-        if (isVideoDownloaded(video.id)) {
+        if (bestVideo == null) {
+            Log.e(TAG, "No video files available to download for video ID: ${video.id}")
             return false
         }
         
-        // Start the download
-        downloadRepository.downloadVideo(video.id, bestVideo.link, localFilePath)
-        return true
+        // Check if already downloading or downloaded
+        if (isVideoDownloaded(video.id)) {
+            Log.d(TAG, "Video ${video.id} is already downloaded")
+            return false
+        }
+        
+        Log.d(TAG, "Preparing to download video ${video.id} with URL: ${bestVideo.link}")
+        
+        try {
+            // Create download directory if it doesn't exist
+            val downloadDir = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), "OwlPlayer")
+            if (!downloadDir.exists()) {
+                val created = downloadDir.mkdirs()
+                Log.d(TAG, "Created download directory: $created")
+            } else {
+                Log.d(TAG, "Download directory already exists at: ${downloadDir.absolutePath}")
+            }
+            
+            // Create unique filename based on video ID and quality
+            val fileName = "video_${video.id}_${bestVideo.quality}.mp4"
+            val localFilePath = "${downloadDir.absolutePath}/$fileName"
+            
+            Log.d(TAG, "Starting download to path: $localFilePath")
+            
+            // Start the download
+            val downloadId = downloadRepository.downloadVideo(video.id, bestVideo.link, localFilePath)
+            Log.d(TAG, "Download started with ID: $downloadId")
+            
+            return true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error starting download for video ${video.id}: ${e.message}", e)
+            return false
+        }
     }
     
     /**
      * Check if a video is downloaded
      */
     fun isVideoDownloaded(videoId: Int): Boolean {
-        return downloadRepository.isVideoDownloaded(videoId)
+        val isDownloaded = downloadRepository.isVideoDownloaded(videoId)
+        Log.d(TAG, "Checking if video $videoId is downloaded: $isDownloaded")
+        return isDownloaded
     }
     
     /**
      * Get the local path for a downloaded video
      */
     fun getLocalVideoPath(videoId: Int): String? {
-        return downloadRepository.getLocalVideoPath(videoId)
+        val path = downloadRepository.getLocalVideoPath(videoId)
+        Log.d(TAG, "Getting local path for video $videoId: $path")
+        return path
     }
     
     /**
      * Remove a downloaded video
      */
     fun removeDownloadedVideo(videoId: Int) {
+        Log.d(TAG, "Removing downloaded video $videoId")
         downloadRepository.removeDownloadedVideo(videoId)
     }
     

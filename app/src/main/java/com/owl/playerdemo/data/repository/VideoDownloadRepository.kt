@@ -1,6 +1,7 @@
 package com.owl.playerdemo.data.repository
 
 import android.content.Context
+import android.util.Log
 import com.owl.playerdemo.model.DownloadedVideo
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -38,6 +39,7 @@ class VideoDownloadRepository @Inject constructor(
     private companion object {
         const val PREFS_NAME = "owl_player_prefs"
         const val KEY_DOWNLOADED_VIDEOS = "downloaded_videos"
+        private const val TAG = "VideoDownloadRepo"
     }
 
     private val _downloadedVideos = MutableStateFlow<Map<Int, DownloadedVideo>>(emptyMap())
@@ -108,14 +110,19 @@ class VideoDownloadRepository @Inject constructor(
     fun downloadVideo(videoId: Int, url: String, destinationPath: String): Int {
         // Check if we're already downloading this video
         if (activeDownloads.containsKey(videoId)) {
+            Log.d(TAG, "Already downloading video $videoId")
             return videoId
         }
+        
+        Log.d(TAG, "Starting download for video $videoId from URL: $url")
+        Log.d(TAG, "Destination path: $destinationPath")
         
         // Create the destination file
         val destinationFile = File(destinationPath)
         
         // Create parent directories if they don't exist
-        destinationFile.parentFile?.mkdirs()
+        val parentCreated = destinationFile.parentFile?.mkdirs() ?: false
+        Log.d(TAG, "Parent directories created: $parentCreated")
         
         // Build the request
         val request = Request.Builder()
@@ -124,6 +131,7 @@ class VideoDownloadRepository @Inject constructor(
         
         // Extract filename from path
         val fileName = destinationFile.name
+        Log.d(TAG, "Filename: $fileName")
         
         // Create the download call
         val call = okHttpClient.newCall(request)
@@ -133,14 +141,17 @@ class VideoDownloadRepository @Inject constructor(
         
         // Update progress to indicate download started
         updateDownloadProgress(videoId, 0f)
+        Log.d(TAG, "Download progress updated to 0%")
         
         // Start the download in a coroutine
         downloadScope.launch {
             try {
                 // Execute the network call
+                Log.d(TAG, "Enqueueing download request")
                 call.enqueue(object : Callback {
                     override fun onFailure(call: Call, e: IOException) {
                         // Handle failure
+                        Log.e(TAG, "Download failed for video $videoId: ${e.message}", e)
                         downloadScope.launch {
                             activeDownloads.remove(videoId)
                             updateDownloadProgress(videoId, -1f) // Negative value indicates error
@@ -149,8 +160,11 @@ class VideoDownloadRepository @Inject constructor(
                     }
 
                     override fun onResponse(call: Call, response: Response) {
+                        Log.d(TAG, "Got response for video $videoId: ${response.code}")
+                        
                         if (!response.isSuccessful) {
                             // Handle unsuccessful response
+                            Log.e(TAG, "Download request unsuccessful: ${response.code}")
                             downloadScope.launch {
                                 activeDownloads.remove(videoId)
                                 updateDownloadProgress(videoId, -1f)
@@ -160,10 +174,12 @@ class VideoDownloadRepository @Inject constructor(
 
                         // Get content length for progress tracking
                         val contentLength = response.body?.contentLength() ?: -1L
+                        Log.d(TAG, "Content length: $contentLength bytes")
                         var bytesDownloaded = 0L
                         
                         try {
                             // Create output stream to save the file
+                            Log.d(TAG, "Creating output stream to save file")
                             FileOutputStream(destinationFile).use { outputStream ->
                                 response.body?.let { body ->
                                     body.byteStream().use { inputStream ->
@@ -179,6 +195,11 @@ class VideoDownloadRepository @Inject constructor(
                                             if (contentLength > 0) {
                                                 val progress = bytesDownloaded.toFloat() / contentLength.toFloat() * 100f
                                                 updateDownloadProgress(videoId, progress)
+                                                
+                                                // Log progress every 10%
+                                                if (progress % 10 < 1) {
+                                                    Log.d(TAG, "Download progress: ${progress.toInt()}%")
+                                                }
                                             }
                                         }
                                         
@@ -187,19 +208,23 @@ class VideoDownloadRepository @Inject constructor(
                                 }
                                 
                                 // Download completed successfully
+                                Log.d(TAG, "Download completed for video $videoId")
                                 downloadScope.launch {
                                     // Save download info
                                     saveDownloadedVideo(videoId, destinationPath, fileName)
+                                    Log.d(TAG, "Video info saved to preferences")
                                     
                                     // Remove from active downloads
                                     activeDownloads.remove(videoId)
                                     
                                     // Set progress to 100%
                                     updateDownloadProgress(videoId, 100f)
+                                    Log.d(TAG, "Final progress updated to 100%")
                                 }
                             }
                         } catch (e: IOException) {
                             // Handle file I/O errors
+                            Log.e(TAG, "File I/O error for video $videoId: ${e.message}", e)
                             downloadScope.launch {
                                 activeDownloads.remove(videoId)
                                 updateDownloadProgress(videoId, -1f)
@@ -208,13 +233,15 @@ class VideoDownloadRepository @Inject constructor(
                             
                             // Clean up partial file if it exists
                             if (destinationFile.exists()) {
-                                destinationFile.delete()
+                                val deleted = destinationFile.delete()
+                                Log.d(TAG, "Partial file deleted: $deleted")
                             }
                         }
                     }
                 })
             } catch (e: Exception) {
                 // Handle any other exceptions
+                Log.e(TAG, "Unexpected error for video $videoId: ${e.message}", e)
                 activeDownloads.remove(videoId)
                 updateDownloadProgress(videoId, -1f)
                 e.printStackTrace()
@@ -250,6 +277,7 @@ class VideoDownloadRepository @Inject constructor(
         if (progress < 0 || progress >= 100) {
             // Remove progress for completed or failed downloads
             updatedMap.remove(videoId)
+            Log.d(TAG, "Removing progress tracking for video $videoId (progress: $progress)")
         } else {
             updatedMap[videoId] = progress
         }
@@ -274,6 +302,8 @@ class VideoDownloadRepository @Inject constructor(
         val updatedMap = _downloadedVideos.value.toMutableMap()
         updatedMap[videoId] = downloadedVideo
         _downloadedVideos.value = updatedMap
+        
+        Log.d(TAG, "Video $videoId added to downloaded videos map")
         
         // Persist to SharedPreferences
         persistDownloadedVideos()
@@ -323,7 +353,9 @@ class VideoDownloadRepository @Inject constructor(
             val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val jsonString = Json.encodeToString(_downloadedVideos.value)
             sharedPrefs.edit().putString(KEY_DOWNLOADED_VIDEOS, jsonString).apply()
+            Log.d(TAG, "Saved ${_downloadedVideos.value.size} videos to SharedPreferences")
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to save downloads to SharedPreferences", e)
             e.printStackTrace()
         }
     }

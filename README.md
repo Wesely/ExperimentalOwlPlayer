@@ -1,10 +1,18 @@
 # OwlPlayer
+This is a demo project developed in approximately 4 hours (3.5 hours for development and 0.5 hours for refinement, debugging, and documentation).
 
 ## Overview
-OwlPlayer is a feature-rich video player application that allows users to search, stream, and download videos from Pexels. It provides robust offline functionality, high-quality playback options, and an intuitive user interface.
+OwlPlayer is a video player that downloads videos from Pexels. Once downloaded, videos can be played offline.
+- The app is designed for landscape orientation![img.png](img.png)
+- We've selected nature videos from the Pexels platform. Tap the download button to start downloading
+- ![img_1.png](img_1.png) You can see when downloads start and track download progress
+- ![img_2.png](img_2.png) Once a video is downloaded, you can play or remove it to free up storage
+- ![img_3.png](img_3.png) We've also provided a storage usage information dialog
+- ![img_4.png](img_4.png) During video playback, use Android's native Back button to navigate back
 
 ## Installation
-A debug build (app-debug.apk) is currently available in the project root for your convinent.
+A debug build (app-debug.apk) is currently available in the project root for your convenience.
+ >> [APK FILE](app-debug.apk)
 
 ## Development Environment
 For reviewers and contributors looking to build the project:
@@ -62,9 +70,10 @@ The application integrates with two main Pexels API endpoints:
 - Seamless handling of connectivity changes
 - Initial content loading when network becomes available
 
-# Further Enhancement
-- If network status is critical, consider exponential fallback recovery schema.
-- Determine if we're gonna share the video contents that we've downloaded with System's Gallery
+# Future Enhancements
+- Implement exponential backoff recovery schema for critical network status issues
+- Decide whether to share downloaded video content with the system's Gallery app
 - Implement Room database to create structured relationships between downloaded video files and Pexels metadata
 - Add a storage management interface for users to view and manage downloaded content
-- Define a policy for handling videos that are no longer available in Pexels API (display or remove local data?)
+- Define a policy for handling videos that are no longer available in the Pexels API (display or remove local data)
+- Add unit tests for business logic, which would be straightforward given our CLEAN architecture implementation

@@ -1,5 +1,6 @@
 package com.owl.playerdemo.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.owl.playerdemo.data.repository.VideoDownloadRepository
@@ -22,6 +23,9 @@ class MainViewModel @Inject constructor(
     private val networkConnectivityManager: NetworkConnectivityManager,
     private val downloadRepository: VideoDownloadRepository
 ) : ViewModel() {
+    private companion object {
+        private const val TAG = "MainViewModel"
+    }
 
     private val _videos = MutableStateFlow<List<VideoItem>>(emptyList())
     val videos: StateFlow<List<VideoItem>> = _videos
@@ -43,6 +47,7 @@ class MainViewModel @Inject constructor(
     val downloadedVideos: StateFlow<Map<Int, DownloadedVideo>> = downloadRepository.downloadedVideos
 
     init {
+        Log.d(TAG, "MainViewModel initialized")
         observeNetworkConnectivity()
         observeDownloadProgress()
     }
@@ -51,6 +56,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             networkConnectivityManager.isNetworkAvailable.collectLatest { isAvailable ->
                 _isNetworkAvailable.value = isAvailable
+                Log.d(TAG, "Network availability changed: $isAvailable")
                 if (isAvailable && _videos.value.isEmpty()) {
                     // If network becomes available and we don't have any videos, fetch them
                     fetchVideos()
@@ -64,7 +70,9 @@ class MainViewModel @Inject constructor(
      */
     private fun observeDownloadProgress() {
         viewModelScope.launch {
+            Log.d(TAG, "Starting to observe download progress")
             downloadRepository.downloadProgress.collectLatest { progressMap ->
+                Log.d(TAG, "Download progress updated: ${progressMap.keys.joinToString()}")
                 _downloadsInProgress.value = progressMap
             }
         }
@@ -74,6 +82,7 @@ class MainViewModel @Inject constructor(
      * Download a video using OkHttp via repository
      */
     fun downloadVideo(videoId: Int, videoUrl: String, filePath: String, fileName: String? = null) {
+        Log.d(TAG, "Requesting download of video $videoId")
         downloadRepository.downloadVideo(videoId, videoUrl, filePath)
     }
     

@@ -1,5 +1,6 @@
 package com.owl.playerdemo.ui.screen
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -40,6 +41,8 @@ import com.owl.playerdemo.ui.components.VideoList
 import com.owl.playerdemo.ui.viewmodel.MainViewModel
 import com.owl.playerdemo.util.PlayerUtils
 
+private const val TAG = "VideoScreen"
+
 @Composable
 fun VideoScreen(viewModel: MainViewModel, videoService: VideoService) {
     val context = LocalContext.current
@@ -49,6 +52,12 @@ fun VideoScreen(viewModel: MainViewModel, videoService: VideoService) {
     val errorMessage by viewModel.errorMessage.collectAsState()
     val downloadsInProgress by viewModel.downloadsInProgress.collectAsState()
     val downloadedVideos by viewModel.downloadedVideos.collectAsState()
+    
+    // Log current state for debugging
+    LaunchedEffect(downloadsInProgress, downloadedVideos) {
+        Log.d(TAG, "Downloads in progress: ${downloadsInProgress.keys.joinToString()}")
+        Log.d(TAG, "Downloaded videos: ${downloadedVideos.keys.joinToString()}")
+    }
     
     // Calculate total storage used by downloaded videos
     val totalStorageUsed = remember(downloadedVideos) {
@@ -147,11 +156,24 @@ fun VideoScreen(viewModel: MainViewModel, videoService: VideoService) {
                     VideoList(
                         videos = videos,
                         onDownloadClick = { video ->
+                            Log.d(TAG, "Download requested for video ${video.id}")
+                            val bestVideoFile = video.videoFiles.firstOrNull()
+                            
+                            if (bestVideoFile == null) {
+                                Log.e(TAG, "No video files available for video ${video.id}")
+                                Toast.makeText(context, "No video file available to download", Toast.LENGTH_SHORT).show()
+                                return@VideoList
+                            }
+                            
+                            Log.d(TAG, "Starting download for video ${video.id} - URL: ${bestVideoFile.link}")
                             val result = videoService.downloadVideo(context, video)
+                            
                             if (result) {
+                                Log.d(TAG, "Download started successfully for video ${video.id}")
                                 Toast.makeText(context, "Download started", Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "This video is already downloaded", Toast.LENGTH_SHORT).show()
+                                Log.d(TAG, "Download failed or already in progress for video ${video.id}")
+                                Toast.makeText(context, "This video is already downloaded or download failed", Toast.LENGTH_SHORT).show()
                             }
                         },
                         onPlayClick = { video ->
